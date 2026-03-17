@@ -8,11 +8,7 @@ from database import init_db, save_result, get_results_by_employee, get_last_res
 app = Flask(__name__)
 app.secret_key = "CHANGE_ME_TO_SOMETHING_RANDOM_123"  # ?? ????? ?????? ???
 
-
-@app.before_first_request
-def setup():
-    init_db()
-
+init_db()
 
 @app.get("/")
 def login():
@@ -132,5 +128,4 @@ def results():
 
 
 if __name__ == "__main__":
-    init_db()
     app.run(debug=True)
