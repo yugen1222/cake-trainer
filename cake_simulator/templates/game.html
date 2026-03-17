@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Тренажёр витрины — FIFO</title>
+
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/znak.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body class="game-body">
+
+<header class="topbar">
+  <div>
+    <h2>Тренажёр витрины — FIFO</h2>
+    <div class="muted">
+      Сотрудник: <b>{{ user_name }}</b> • Смена: <b>{{ shift }}</b> • Режим: <b>{{ mode }}</b>
+    </div>
+
+    <div class="top-links">
+      <a class="chip-link" href="{{ url_for('menu') }}">Сменить режим</a>
+      <a class="chip-link danger" href="{{ url_for('logout') }}">Выйти</a>
+    </div>
+  </div>
+
+  <div class="fifo-legend">
+    <div class="legend-title">FIFO (7 цветов)</div>
+    <div class="legend-dots">
+      <span class="dot fifo-green" title="Пн"></span>
+      <span class="dot fifo-yellow" title="Вт"></span>
+      <span class="dot fifo-red" title="Ср"></span>
+      <span class="dot fifo-blue" title="Чт"></span>
+      <span class="dot fifo-orange" title="Пт"></span>
+      <span class="dot fifo-purple" title="Сб"></span>
+      <span class="dot fifo-white" title="Вс"></span>
+    </div>
+  </div>
+</header>
+
+<div class="stage-wrap">
+  <div class="stage">
+    <main class="layout">
+
+      <!-- ВИТРИНА -->
+      <section class="showcase">
+        <!-- Левая сторона -->
+        <div class="side">
+          <div class="side-title">chap tomon (фруктовые)</div>
+
+          {% for sidx in range(6) %}
+            <div class="shelf" data-side="left" data-shelf="{{ sidx+1 }}">
+              <div class="shelf-title">Полка {{ sidx+1 }}</div>
+
+              <div class="slots">
+                {% for p in range(4) %}
+                  {% set it = state.showcase.left[sidx][p] %}
+                  <div class="slot" data-slot="{{ p }}" data-expected-tier="{{ state.tiers[sidx+1] }}">
+                    {% if it %}
+                      <div class="cake" draggable="true"
+                           data-name="{{ it.name }}"
+                           data-rank="{{ it.rank }}"
+                           data-tier="{{ it.tier }}"
+                           data-side="left">
+                        {% if it.img %}
+                          <img class="cake-img"
+                               src="{{ url_for('static', filename='foto_tortik/' ~ it.img) }}"
+                               alt="{{ it.name }}"
+                               onerror="this.style.display='none'">
+                        {% endif %}
+                        <div class="cake-name">{{ it.name }}</div>
+                        <div class="dot {{ it.fifo_color }}"></div>
+                      </div>
+                    {% else %}
+                      <div class="empty">Пусто</div>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        <!-- Правая сторона -->
+        <div class="side">
+          <div class="side-title">o‘ng tomon (шоколадные)</div>
+
+          {% for sidx in range(6) %}
+            <div class="shelf" data-side="right" data-shelf="{{ sidx+1 }}">
+              <div class="shelf-title">Полка {{ sidx+1 }}</div>
+
+              <div class="slots">
+                {% for p in range(4) %}
+                  {% set it = state.showcase.right[sidx][p] %}
+                  <div class="slot" data-slot="{{ p }}" data-expected-tier="{{ state.tiers[sidx+1] }}">
+                    {% if it %}
+                      <div class="cake" draggable="true"
+                           data-name="{{ it.name }}"
+                           data-rank="{{ it.rank }}"
+                           data-tier="{{ it.tier }}"
+                           data-side="right">
+                        {% if it.img %}
+                          <img class="cake-img"
+                               src="{{ url_for('static', filename='foto_tortik/' ~ it.img) }}"
+                               alt="{{ it.name }}"
+                               onerror="this.style.display='none'">
+                        {% endif %}
+                        <div class="cake-name">{{ it.name }}</div>
+                        <div class="dot {{ it.fifo_color }}"></div>
+                      </div>
+                    {% else %}
+                      <div class="empty">Пусто</div>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <!-- МОРОЗИЛКА -->
+      <aside class="freezer">
+        <div class="freezer-title">Морозилка (склад)</div>
+        <div class="muted small">В режимах 1–3 морозилку трогать нельзя. В режиме 4 можно переносить в пустой слот.</div>
+
+        <div class="freezer-grid">
+          {% for it in state.freezer.left %}
+            <div class="freezer-item cake" draggable="true"
+                 data-name="{{ it.name }}"
+                 data-rank="{{ it.rank }}"
+                 data-tier="{{ it.tier }}"
+                 data-side="{{ it.side if it.side else 'left' }}">
+              {% if it.img %}
+                <img class="cake-img"
+                     src="{{ url_for('static', filename='foto_tortik/' ~ it.img) }}"
+                     alt="{{ it.name }}"
+                     onerror="this.style.display='none'">
+              {% endif %}
+              <div class="cake-name">{{ it.name }}</div>
+              <div class="dot {{ it.fifo_color }}"></div>
+            </div>
+          {% endfor %}
+
+          {% for it in state.freezer.right %}
+            <div class="freezer-item cake" draggable="true"
+                 data-name="{{ it.name }}"
+                 data-rank="{{ it.rank }}"
+                 data-tier="{{ it.tier }}"
+                 data-side="{{ it.side if it.side else 'right' }}">
+              {% if it.img %}
+                <img class="cake-img"
+                     src="{{ url_for('static', filename='foto_tortik/' ~ it.img) }}"
+                     alt="{{ it.name }}"
+                     onerror="this.style.display='none'">
+              {% endif %}
+              <div class="cake-name">{{ it.name }}</div>
+              <div class="dot {{ it.fifo_color }}"></div>
+            </div>
+          {% endfor %}
+        </div>
+      </aside>
+
+    </main>
+  </div>
+</div>
+
+<footer class="controls">
+  <button class="btn dark" id="btnCheck" type="button">Проверить</button>
+  <button class="btn" id="btnClear" type="button">Снять подсветку</button>
+  <a class="btn primary" href="{{ url_for('restart', mode=mode) }}">Сгенерировать заново</a>
+  <a class="btn" href="{{ url_for('menu') }}">Сменить режим</a>
+
+  <div class="muted small hint">
+    Перетаскивание = <b>обмен местами</b>.
+    В режиме 4 можно класть из морозилки <b>только</b> в пустой слот.
+  </div>
+</footer>
+
+<!-- МОДАЛКА "ПРОВЕРКА" -->
+<div class="modal" id="resultModal" hidden>
+  <div class="modal-card">
+    <img class="modal-img" src="{{ url_for('static', filename='icons/proverka.png') }}" alt="Проверка">
+    <div class="modal-text" id="resultText">...</div>
+    <button class="btn primary" id="btnCloseModal" type="button">Ок</button>
+  </div>
+</div>
+
+<script>
+  window.GAME_MODE = {{ mode }};
+</script>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+
+</body>
+</html>
