@@ -1,0 +1,465 @@
+/* =====================================================
+   BASE
+===================================================== */
+:root{
+  --bg: #f3f5f9;
+  --card: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --line: #e5e7eb;
+
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --danger: #ef4444;
+
+  --shadow: 0 8px 28px rgba(15,23,42,.10);
+  --radius: 18px;
+
+  --headerH: 78px;
+  --footerH: 74px;
+}
+
+*{ box-sizing:border-box; }
+html, body{ height:100%; }
+
+body{
+  margin:0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+a{ text-decoration:none; color:inherit; }
+.muted{ color: var(--muted); }
+.small{ font-size:12px; }
+
+/* pages */
+.page-body{ min-height:100vh; }
+.game-body{
+  height:100vh;
+  overflow:hidden; /* у игры фиксированный header/footer */
+}
+
+/* =====================================================
+   BUTTONS
+===================================================== */
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 16px;
+  height:42px;
+  border-radius:14px;
+  border:1px solid var(--line);
+  background:#fff;
+  font-weight:700;
+  cursor:pointer;
+  transition:.15s ease;
+}
+
+.btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow); }
+
+.btn.primary{
+  background: linear-gradient(180deg, var(--primary), var(--primary-dark));
+  border:none;
+  color:#fff;
+}
+
+.btn.dark{
+  background:#0f172a;
+  color:#fff;
+  border:none;
+}
+
+.btn.danger{
+  background:rgba(239,68,68,.1);
+  border-color:rgba(239,68,68,.25);
+  color:#b91c1c;
+}
+
+.btn-wide{ width:100%; }
+
+/* =====================================================
+   TOPBAR
+===================================================== */
+.topbar{
+  height: var(--headerH);
+  padding:14px 18px;
+  border-bottom:1px solid var(--line);
+  background:#ffffff;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:14px;
+}
+
+.topbar-tight{ height: var(--headerH); }
+
+.top-actions{
+  display:flex;
+  gap:10px;
+}
+
+/* links chips in game */
+.top-links{
+  margin-top:8px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.chip-link{
+  display:inline-flex;
+  align-items:center;
+  height:34px;
+  padding:0 12px;
+  border-radius:12px;
+  background: rgba(37,99,235,.10);
+  color: #1d4ed8;
+  font-weight:800;
+}
+.chip-link:hover{ background: rgba(37,99,235,.18); }
+
+.chip-link.danger{
+  background: rgba(239,68,68,.12);
+  color: #b91c1c;
+}
+.chip-link.danger:hover{ background: rgba(239,68,68,.18); }
+
+/* FIFO legend */
+.fifo-legend{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background: rgba(15,23,42,.04);
+  padding:10px 12px;
+  border-radius:16px;
+  border: 1px solid rgba(15,23,42,.06);
+}
+
+.legend-title{
+  font-weight:900;
+  font-size:14px;
+}
+
+.legend-dots{ display:flex; gap:8px; }
+
+.dot{
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  border:2px solid rgba(0,0,0,.10);
+}
+
+.fifo-green{ background:#22c55e; }
+.fifo-yellow{ background:#facc15; }
+.fifo-red{ background:#ef4444; }
+.fifo-blue{ background:#3b82f6; }
+.fifo-orange{ background:#f59e0b; }
+.fifo-purple{ background:#a855f7; }
+.fifo-white{ background:#ffffff; }
+
+/* =====================================================
+   AUTH
+===================================================== */
+.auth-body{
+  min-height:100vh;
+  overflow:auto;
+}
+
+.auth-wrap{
+  min-height:100vh;
+  display:grid;
+  place-items:center;
+  padding: 20px;
+}
+
+.auth-card{
+  width: min(460px, 92vw);
+  background: var(--card);
+  border-radius:22px;
+  padding:22px;
+  box-shadow: var(--shadow);
+  border:1px solid var(--line);
+}
+
+.auth-title{ font-size:22px; font-weight:900; }
+.auth-sub{ margin-top:6px; color:var(--muted); font-size:14px; }
+
+.hero-img{
+  width: 190px;
+  display:block;
+  margin: 14px auto 8px;
+}
+
+.field{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-top:14px;
+}
+
+input, select{
+  height:44px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:0 12px;
+  outline:none;
+}
+
+input:focus, select:focus{
+  border-color:rgba(37,99,235,.4);
+  box-shadow:0 0 0 4px rgba(37,99,235,.12);
+}
+
+.auth-hint{
+  margin-top:14px;
+  padding-top:14px;
+  border-top:1px solid var(--line);
+}
+
+/* =====================================================
+   MENU
+===================================================== */
+.menu-wrap{
+  min-height: calc(100vh - var(--headerH));
+  overflow:auto;
+  padding:20px;
+}
+
+.menu-grid{
+  max-width:1000px;
+  margin:0 auto;
+  display:grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap:14px;
+}
+
+@media(max-width:900px){
+  .menu-grid{ grid-template-columns:1fr; }
+}
+
+.mode-card{
+  background: var(--card);
+  border:1px solid var(--line);
+  border-radius:22px;
+  padding:18px;
+  display:flex;
+  gap:14px;
+  transition:.15s ease;
+  align-items:flex-start;
+}
+
+.mode-card:hover{
+  transform:translateY(-2px);
+  box-shadow:var(--shadow);
+}
+
+.mode-num{
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  background:rgba(37,99,235,.1);
+  display:grid;
+  place-items:center;
+  font-weight:900;
+  color:var(--primary);
+  flex:0 0 auto;
+}
+
+.mode-title{ font-weight:900; }
+.mode-text{ margin-top:6px; font-size:13px; color:var(--muted); }
+.mode-go{ margin-left:auto; font-weight:900; color:var(--primary); padding-top:6px; }
+
+/* =====================================================
+   GAME LAYOUT
+===================================================== */
+.stage-wrap{
+  height: calc(100vh - var(--headerH) - var(--footerH));
+  padding: 12px 14px;
+  overflow: hidden;
+}
+
+.stage{
+  height:100%;
+  max-width:1500px;
+  margin:0 auto;
+}
+
+.layout{
+  height:100%;
+  display:grid;
+  grid-template-columns: 2fr 1fr;
+  gap:14px;
+}
+
+.showcase{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:14px;
+  overflow:hidden;
+}
+
+.side, .freezer{
+  background: var(--card);
+  border-radius: var(--radius);
+  border:1px solid var(--line);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+.side{
+  padding:12px;
+  overflow:auto;
+}
+
+.freezer{
+  padding:12px;
+  overflow:auto;
+}
+
+.side-title, .freezer-title{
+  font-weight:900;
+  margin-bottom:10px;
+}
+
+/* shelves */
+.shelf{
+  border:2px dashed rgba(59,130,246,.22);
+  border-radius:16px;
+  padding:10px;
+  margin-bottom:12px;
+  background:rgba(239,246,255,.60);
+}
+
+.shelf-title{ font-weight:900; margin-bottom:8px; }
+
+/* slots */
+.slots{
+  display:grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap:10px;
+}
+
+.slot{
+  min-height:95px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px;
+  background:#fff;
+  position: relative;
+}
+
+.empty{
+  font-weight:900;
+  color: rgba(15,23,42,.35);
+}
+
+/* cake */
+.cake{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  position:relative;
+  cursor: grab;
+}
+.cake:active{ cursor: grabbing; }
+
+.cake-img{ height:54px; object-fit:contain; }
+
+.cake-name{
+  font-size:12px;
+  font-weight:900;
+  text-align:center;
+  color:#0f172a;
+}
+
+.cake .dot{
+  position:absolute;
+  top:8px;
+  right:8px;
+}
+
+/* IMPORTANT: чтобы drag работал от текста/картинки */
+.cake > * { pointer-events: none; }
+
+/* freezer grid */
+.freezer-grid{
+  display:grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap:10px;
+}
+
+.freezer-item{
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:10px;
+  background:#fff;
+}
+
+/* =====================================================
+   FOOTER CONTROLS
+===================================================== */
+.controls{
+  height: var(--footerH);
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.hint{
+  margin-left:auto;
+  max-width:520px;
+  text-align:right;
+}
+
+/* =====================================================
+   CHECK HIGHLIGHTS
+===================================================== */
+.mark-ok{ outline: 3px solid rgba(34,197,94,.55); }
+.mark-bad{ outline: 3px solid rgba(239,68,68,.55); }
+
+.shelf-ok{ background: rgba(34,197,94,.08); border-color: rgba(34,197,94,.35); }
+.shelf-bad{ background: rgba(239,68,68,.06); border-color: rgba(239,68,68,.30); }
+
+/* =====================================================
+   MODAL (ПРОВЕРКА)
+===================================================== */
+.modal[hidden]{ display:none; }
+.modal{
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,.45);
+  display: grid;
+  place-items: center;
+  z-index: 3000;
+}
+
+.modal-card{
+  width: min(420px, 92vw);
+  background: #fff;
+  border-radius: 20px;
+  padding: 18px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 18px 60px rgba(15,23,42,.25);
+  text-align: center;
+}
+
+.modal-img{
+  width: 190px;
+  margin: 6px auto 10px;
+  display:block;
+}
+
+.modal-text{
+  font-weight: 900;
+  margin: 10px 0 14px;
+}

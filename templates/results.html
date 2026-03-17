@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Результаты</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/znak.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="page-body">
+
+<header class="topbar">
+  <div>
+    <h2>Результаты сотрудников</h2>
+    <div class="muted">
+      Сотрудник: <b>{{ user_name }}</b> • Смена: <b>{{ shift }}</b>
+    </div>
+  </div>
+
+  <div class="top-actions">
+    <a class="btn" href="{{ url_for('menu') }}">Назад</a>
+    <a class="btn danger" href="{{ url_for('logout') }}">Выйти</a>
+  </div>
+</header>
+
+<main class="menu-wrap">
+  <div class="results-grid">
+
+    <section class="results-card">
+      <h3>Мои результаты</h3>
+      {% if employee_results %}
+        <div class="results-table-wrap">
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>Дата</th>
+                <th>Режим</th>
+                <th>%</th>
+                <th>Ошибки</th>
+                <th>Смена</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in employee_results %}
+                <tr>
+                  <td>{{ row.created_at }}</td>
+                  <td>{{ row.mode }}</td>
+                  <td>{{ row.score_percent }}</td>
+                  <td>{{ row.errors_count }}</td>
+                  <td>{{ row.shift }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted">Пока результатов нет.</p>
+      {% endif %}
+    </section>
+
+    <section class="results-card">
+      <h3>Последние результаты всех</h3>
+      {% if last_results %}
+        <div class="results-table-wrap">
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>Сотрудник</th>
+                <th>Дата</th>
+                <th>Режим</th>
+                <th>%</th>
+                <th>Ошибки</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in last_results %}
+                <tr>
+                  <td>{{ row.employee_name }}</td>
+                  <td>{{ row.created_at }}</td>
+                  <td>{{ row.mode }}</td>
+                  <td>{{ row.score_percent }}</td>
+                  <td>{{ row.errors_count }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted">Пока результатов нет.</p>
+      {% endif %}
+    </section>
+
+  </div>
+</main>
+
+</body>
+</html>
