@@ -2,8 +2,8 @@
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 
-from generator import generate_game_state
-from database import init_db, save_result, get_results_by_employee, get_last_results
+from cake_simulator.generator import generate_game_state
+from cake_simulator.database import init_db, save_result, get_results_by_employee, get_last_results
 
 app = Flask(__name__)
 app.secret_key = "CHANGE_ME_TO_SOMETHING_RANDOM_123"  # ?? ????? ?????? ???
