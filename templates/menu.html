@@ -3,11 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <title>Сложность — Тренажёр витрины</title>
-
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/znak.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-
 <body class="page-body">
 
 <header class="topbar topbar-tight">
@@ -18,7 +16,7 @@
     </div>
   </div>
 
-  <div class="top-actions">
+  <div class="top-actions mobile-actions">
     <a class="btn" href="{{ url_for('results') }}">Результаты</a>
     <a class="btn" href="{{ url_for('login') }}">Изменить имя</a>
     <a class="btn danger" href="{{ url_for('logout') }}">Выйти</a>
@@ -26,54 +24,105 @@
 </header>
 
 <main class="menu-wrap">
-  <div class="menu-grid">
-    <a class="mode-card" href="{{ url_for('game', mode=1) }}">
-      <div class="mode-num">1</div>
-      <div>
-        <div class="mode-title">Только FIFO</div>
-        <div class="mode-text">
-          Витрина ~80% уже правильная.<br>
-          Исправь ~20% по FIFO.
-        </div>
-      </div>
-      <div class="mode-go">Начать →</div>
-    </a>
+  <div class="dashboard-grid">
 
-    <a class="mode-card" href="{{ url_for('game', mode=2) }}">
-      <div class="mode-num">2</div>
-      <div>
-        <div class="mode-title">FIFO + цена</div>
-        <div class="mode-text">
-          FIFO в целом правильный.<br>
-          Цена ~80% правильная, ~20% исправь.
+    <section class="dashboard-main">
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-title">Попыток</div>
+          <div class="stat-value">{{ summary.attempts }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Лучший результат</div>
+          <div class="stat-value">{{ summary.best_score }}%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Средний результат</div>
+          <div class="stat-value">{{ summary.avg_score }}%</div>
         </div>
       </div>
-      <div class="mode-go">Начать →</div>
-    </a>
 
-    <a class="mode-card" href="{{ url_for('game', mode=3) }}">
-      <div class="mode-num">3</div>
-      <div>
-        <div class="mode-title">Смешанный</div>
-        <div class="mode-text">
-          Витрина ~70% правильная.<br>
-          ~30% перемешано: и FIFO, и цена.
-        </div>
-      </div>
-      <div class="mode-go">Начать →</div>
-    </a>
+      <div class="menu-grid">
+        <a class="mode-card" href="{{ url_for('game', mode=1) }}">
+          <div class="mode-num">1</div>
+          <div>
+            <div class="mode-title">Только FIFO</div>
+            <div class="mode-text">
+              Витрина ~80% уже правильная.<br>
+              Исправь ~20% по FIFO.
+            </div>
+          </div>
+          <div class="mode-go">Начать →</div>
+        </a>
 
-    <a class="mode-card" href="{{ url_for('game', mode=4) }}">
-      <div class="mode-num">4</div>
-      <div>
-        <div class="mode-title">Заполнение витрины</div>
-        <div class="mode-text">
-          В витрине есть пустые места.<br>
-          Пополни из морозилки (склад).
-        </div>
+        <a class="mode-card" href="{{ url_for('game', mode=2) }}">
+          <div class="mode-num">2</div>
+          <div>
+            <div class="mode-title">FIFO + цена</div>
+            <div class="mode-text">
+              FIFO в целом правильный.<br>
+              Цена ~80% правильная, ~20% исправь.
+            </div>
+          </div>
+          <div class="mode-go">Начать →</div>
+        </a>
+
+        <a class="mode-card" href="{{ url_for('game', mode=3) }}">
+          <div class="mode-num">3</div>
+          <div>
+            <div class="mode-title">Смешанный</div>
+            <div class="mode-text">
+              Витрина ~70% правильная.<br>
+              ~30% перемешано: и FIFO, и цена.
+            </div>
+          </div>
+          <div class="mode-go">Начать →</div>
+        </a>
+
+        <a class="mode-card" href="{{ url_for('game', mode=4) }}">
+          <div class="mode-num">4</div>
+          <div>
+            <div class="mode-title">Заполнение витрины</div>
+            <div class="mode-text">
+              В витрине есть пустые места.<br>
+              Пополни из морозилки (склад).
+            </div>
+          </div>
+          <div class="mode-go">Начать →</div>
+        </a>
       </div>
-      <div class="mode-go">Начать →</div>
-    </a>
+    </section>
+
+    <aside class="dashboard-side">
+      <div class="mini-panel">
+        <h3>Топ сотрудников</h3>
+        {% if top_employees %}
+          {% for row in top_employees %}
+            <div class="mini-row">
+              <b>{{ row.employee_name }}</b>
+              <span>{{ row.best_score }}%</span>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="muted">Пока данных нет</div>
+        {% endif %}
+      </div>
+
+      <div class="mini-panel">
+        <h3>Последние результаты</h3>
+        {% if last_results %}
+          {% for row in last_results %}
+            <div class="mini-row">
+              <span>{{ row.employee_name }} · режим {{ row.mode }}</span>
+              <b>{{ row.score_percent }}%</b>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="muted">Пока данных нет</div>
+        {% endif %}
+      </div>
+    </aside>
+
   </div>
 </main>
 
