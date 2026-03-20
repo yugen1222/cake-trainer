@@ -3,13 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <title>Вход — Тренажёр витрины</title>
-
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/znak.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-
 <body class="auth-body">
 
+<div class="auth-page">
   <div class="auth-wrap">
     <div class="auth-card">
       <div class="auth-title">Тренажёр витрины</div>
@@ -40,6 +39,37 @@
       </div>
     </div>
   </div>
+
+  <div class="auth-side">
+    <div class="mini-panel">
+      <h3>Топ сотрудников</h3>
+      {% if top_employees %}
+        {% for row in top_employees %}
+          <div class="mini-row">
+            <b>{{ row.employee_name }}</b>
+            <span>{{ row.best_score }}%</span>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="muted">Пока данных нет</div>
+      {% endif %}
+    </div>
+
+    <div class="mini-panel">
+      <h3>Последние результаты</h3>
+      {% if last_results %}
+        {% for row in last_results %}
+          <div class="mini-row">
+            <span>{{ row.employee_name }} · режим {{ row.mode }}</span>
+            <b>{{ row.score_percent }}%</b>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="muted">Пока данных нет</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
