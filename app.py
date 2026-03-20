@@ -2,17 +2,31 @@
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 
-from generator import generate_game_state
-from database import init_db, save_result, get_results_by_employee, get_last_results
+from cake_simulator.generator import generate_game_state
+from cake_simulator.database import (
+    init_db,
+    save_result,
+    get_results_by_employee,
+    get_last_results,
+    get_top_employees,
+    get_employee_summary,
+)
 
 app = Flask(__name__)
-app.secret_key = "CHANGE_ME_TO_SOMETHING_RANDOM_123"  # ?? ????? ?????? ???
+app.secret_key = "CHANGE_ME_TO_SOMETHING_RANDOM_123"
 
 init_db()
 
+
 @app.get("/")
 def login():
-    return render_template("login.html")
+    top_employees = get_top_employees(5)
+    last_results = get_last_results(5)
+    return render_template(
+        "login.html",
+        top_employees=top_employees,
+        last_results=last_results
+    )
 
 
 @app.post("/start")
@@ -38,7 +52,19 @@ def start():
 def menu():
     if "name" not in session:
         return redirect(url_for("login"))
-    return render_template("menu.html", name=session["name"], shift=session["shift"])
+
+    summary = get_employee_summary(session["name"])
+    top_employees = get_top_employees(5)
+    last_results = get_last_results(5)
+
+    return render_template(
+        "menu.html",
+        name=session["name"],
+        shift=session["shift"],
+        summary=summary,
+        top_employees=top_employees,
+        last_results=last_results
+    )
 
 
 @app.get("/logout")
@@ -117,13 +143,17 @@ def results():
 
     employee_results = get_results_by_employee(session["name"])
     last_results = get_last_results(20)
+    top_employees = get_top_employees(20)
+    summary = get_employee_summary(session["name"])
 
     return render_template(
         "results.html",
         user_name=session["name"],
         shift=session["shift"],
         employee_results=employee_results,
-        last_results=last_results
+        last_results=last_results,
+        top_employees=top_employees,
+        summary=summary
     )
 
 
