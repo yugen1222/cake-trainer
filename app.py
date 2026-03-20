@@ -2,8 +2,8 @@
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 
-from cake_simulator.generator import generate_game_state
-from cake_simulator.database import (
+from generator import generate_game_state
+from database import (
     init_db,
     save_result,
     get_results_by_employee,
