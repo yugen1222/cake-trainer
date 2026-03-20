@@ -16,13 +16,28 @@
     </div>
   </div>
 
-  <div class="top-actions">
+  <div class="top-actions mobile-actions">
     <a class="btn" href="{{ url_for('menu') }}">Назад</a>
     <a class="btn danger" href="{{ url_for('logout') }}">Выйти</a>
   </div>
 </header>
 
 <main class="menu-wrap">
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-title">Попыток</div>
+      <div class="stat-value">{{ summary.attempts }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">Лучший результат</div>
+      <div class="stat-value">{{ summary.best_score }}%</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">Средний результат</div>
+      <div class="stat-value">{{ summary.avg_score }}%</div>
+    </div>
+  </div>
+
   <div class="results-grid">
 
     <section class="results-card">
@@ -58,6 +73,36 @@
     </section>
 
     <section class="results-card">
+      <h3>Топ сотрудников</h3>
+      {% if top_employees %}
+        <div class="results-table-wrap">
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>Сотрудник</th>
+                <th>Попыток</th>
+                <th>Лучший %</th>
+                <th>Средний %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in top_employees %}
+                <tr>
+                  <td>{{ row.employee_name }}</td>
+                  <td>{{ row.attempts }}</td>
+                  <td>{{ row.best_score }}</td>
+                  <td>{{ row.avg_score }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted">Пока результатов нет.</p>
+      {% endif %}
+    </section>
+
+    <section class="results-card full-width">
       <h3>Последние результаты всех</h3>
       {% if last_results %}
         <div class="results-table-wrap">
