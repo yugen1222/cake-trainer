@@ -11,7 +11,7 @@
 <body class="game-body">
 
 <header class="topbar">
-  <div>
+  <div class="topbar-info">
     <h2>Тренажёр витрины — FIFO</h2>
 
     <div class="muted">
@@ -22,7 +22,7 @@
     </div>
 
     <div class="muted small fifo-order-text">
-      FIFO порядок сегодня:
+      FIFO порядок:
       {% for label in state.fifo_order_labels %}
         <b>{{ label }}</b>{% if not loop.last %} → {% endif %}
       {% endfor %}
@@ -35,7 +35,7 @@
   </div>
 
   <div class="fifo-legend">
-    <div class="legend-title">FIFO (7 цветов)</div>
+    <div class="legend-title">FIFO</div>
     <div class="legend-dots">
       <span class="dot fifo-green" title="Пн"></span>
       <span class="dot fifo-yellow" title="Вт"></span>
@@ -52,12 +52,10 @@
   <div class="stage">
     <main class="layout">
 
-      <!-- ВИТРИНА -->
       <section class="showcase">
 
-        <!-- ЛЕВАЯ СТОРОНА -->
         <div class="side">
-          <div class="side-title">chap tomon (фруктовые)</div>
+          <div class="side-title">chap tomon — фруктовые</div>
 
           {% for sidx in range(6) %}
             <div class="shelf" data-side="left" data-shelf="{{ sidx+1 }}">
@@ -69,7 +67,6 @@
               <div class="slots">
                 {% for p in range(4) %}
                   {% set it = state.showcase.left[sidx][p] %}
-
                   <div class="slot"
                        data-slot="{{ p }}"
                        data-side="left"
@@ -95,15 +92,12 @@
                         {% endif %}
 
                         <div class="cake-name">{{ it.name }}</div>
-                        <div class="cake-mini">
-                          <span>{{ it.fifo_label }}</span>
-                        </div>
+                        <div class="cake-mini">{{ it.fifo_label }}</div>
                         <div class="dot {{ it.fifo_color }}"></div>
                       </div>
                     {% else %}
                       <div class="empty">Пусто</div>
                     {% endif %}
-
                   </div>
                 {% endfor %}
               </div>
@@ -111,9 +105,8 @@
           {% endfor %}
         </div>
 
-        <!-- ПРАВАЯ СТОРОНА -->
         <div class="side">
-          <div class="side-title">o‘ng tomon (шоколадные)</div>
+          <div class="side-title">o‘ng tomon — шоколадные</div>
 
           {% for sidx in range(6) %}
             <div class="shelf" data-side="right" data-shelf="{{ sidx+1 }}">
@@ -125,7 +118,6 @@
               <div class="slots">
                 {% for p in range(4) %}
                   {% set it = state.showcase.right[sidx][p] %}
-
                   <div class="slot"
                        data-slot="{{ p }}"
                        data-side="right"
@@ -151,31 +143,27 @@
                         {% endif %}
 
                         <div class="cake-name">{{ it.name }}</div>
-                        <div class="cake-mini">
-                          <span>{{ it.fifo_label }}</span>
-                        </div>
+                        <div class="cake-mini">{{ it.fifo_label }}</div>
                         <div class="dot {{ it.fifo_color }}"></div>
                       </div>
                     {% else %}
                       <div class="empty">Пусто</div>
                     {% endif %}
-
                   </div>
                 {% endfor %}
               </div>
             </div>
           {% endfor %}
         </div>
+
       </section>
 
-      <!-- ПРАВАЯ ПАНЕЛЬ -->
       {% if mode == 4 %}
-        <!-- МОРОЗИЛКА ТОЛЬКО ДЛЯ РЕЖИМА 4 -->
         <aside class="freezer">
-          <div class="freezer-title">Морозилка (склад)</div>
+          <div class="freezer-title">Морозилка / склад</div>
           <div class="muted small">
-            В режиме 4 можно переносить торты в пустые слоты.
-            После заполнения проверяется FIFO и ценовая категория.
+            В режиме 4 можно переносить торт только в пустой слот.
+            Проверяется: заполнение + FIFO + цена.
           </div>
 
           <div class="freezer-grid">
@@ -198,9 +186,7 @@
                 {% endif %}
 
                 <div class="cake-name">{{ it.name }}</div>
-                <div class="cake-mini">
-                  <span>{{ it.fifo_label }}</span>
-                </div>
+                <div class="cake-mini">{{ it.fifo_label }}</div>
                 <div class="dot {{ it.fifo_color }}"></div>
               </div>
             {% endfor %}
@@ -224,21 +210,17 @@
                 {% endif %}
 
                 <div class="cake-name">{{ it.name }}</div>
-                <div class="cake-mini">
-                  <span>{{ it.fifo_label }}</span>
-                </div>
+                <div class="cake-mini">{{ it.fifo_label }}</div>
                 <div class="dot {{ it.fifo_color }}"></div>
               </div>
             {% endfor %}
           </div>
         </aside>
-
       {% else %}
-        <!-- ТАБЛИЦА ЦЕН ДЛЯ РЕЖИМОВ 1,2,3 -->
         <aside class="price-panel">
           <div class="freezer-title">Таблица цен</div>
           <div class="muted small">
-            Торты идут по алфавиту. Используй таблицу, чтобы понять ценовую категорию.
+            Торты отсортированы по алфавиту, чтобы сотрудник сам искал категорию.
           </div>
 
           <div class="price-table">
@@ -266,24 +248,25 @@
 <footer class="controls">
   <button class="btn dark" id="btnCheck" type="button">Проверить</button>
   <button class="btn" id="btnClear" type="button">Снять подсветку</button>
+  <button class="btn" id="btnTimer" type="button">Таймер</button>
+  <div class="timer-box" id="timerBox">⏱ без таймера</div>
+
   <a class="btn primary" href="{{ url_for('restart', mode=mode) }}">Сгенерировать заново</a>
   <a class="btn" href="{{ url_for('menu') }}">Сменить режим</a>
 
   <div class="muted small hint">
-    Режим {{ mode }}:
     {% if mode == 1 %}
-      проверяется только FIFO.
+      Режим 1: проверяется FIFO.
     {% elif mode == 2 %}
-      проверяется FIFO и ценовая категория.
+      Режим 2: проверяется FIFO + ценовая категория.
     {% elif mode == 3 %}
-      проверяется смешанная витрина: FIFO + цена.
+      Режим 3: смешанная проверка FIFO + цена.
     {% elif mode == 4 %}
-      нужно заполнить пустые места, затем проверяется FIFO + цена.
+      Режим 4: заполнение + FIFO + цена.
     {% endif %}
   </div>
 </footer>
 
-<!-- МОДАЛКА "ПРОВЕРКА" -->
 <div class="modal" id="resultModal" hidden>
   <div class="modal-card">
     <img class="modal-img" src="{{ url_for('static', filename='icons/proverka.png') }}" alt="Проверка">
