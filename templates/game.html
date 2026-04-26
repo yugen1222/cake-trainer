@@ -13,8 +13,19 @@
 <header class="topbar">
   <div>
     <h2>Тренажёр витрины — FIFO</h2>
+
     <div class="muted">
-      Сотрудник: <b>{{ user_name }}</b> • Смена: <b>{{ shift }}</b> • Режим: <b>{{ mode }}</b>
+      Сотрудник: <b>{{ user_name }}</b> •
+      Смена: <b>{{ shift }}</b> •
+      Режим: <b>{{ mode }}</b> •
+      Сегодня: <b>{{ state.today_fifo_label }}</b>
+    </div>
+
+    <div class="muted small fifo-order-text">
+      FIFO порядок сегодня:
+      {% for label in state.fifo_order_labels %}
+        <b>{{ label }}</b>{% if not loop.last %} → {% endif %}
+      {% endfor %}
     </div>
 
     <div class="top-links">
@@ -43,36 +54,56 @@
 
       <!-- ВИТРИНА -->
       <section class="showcase">
-        <!-- Левая сторона -->
+
+        <!-- ЛЕВАЯ СТОРОНА -->
         <div class="side">
           <div class="side-title">chap tomon (фруктовые)</div>
 
           {% for sidx in range(6) %}
             <div class="shelf" data-side="left" data-shelf="{{ sidx+1 }}">
-              <div class="shelf-title">Полка {{ sidx+1 }}</div>
+              <div class="shelf-title">
+                Полка {{ sidx+1 }}
+                <span class="shelf-tier">({{ state.tiers[sidx+1] }})</span>
+              </div>
 
               <div class="slots">
                 {% for p in range(4) %}
                   {% set it = state.showcase.left[sidx][p] %}
-                  <div class="slot" data-slot="{{ p }}" data-expected-tier="{{ state.tiers[sidx+1] }}">
+
+                  <div class="slot"
+                       data-slot="{{ p }}"
+                       data-side="left"
+                       data-shelf="{{ sidx+1 }}"
+                       data-expected-tier="{{ state.tiers[sidx+1] }}">
+
                     {% if it %}
-                      <div class="cake" draggable="true"
+                      <div class="cake"
+                           draggable="true"
                            data-name="{{ it.name }}"
                            data-rank="{{ it.rank }}"
+                           data-fifo-day="{{ it.fifo_day }}"
+                           data-fifo-label="{{ it.fifo_label }}"
                            data-tier="{{ it.tier }}"
+                           data-price="{{ it.price }}"
                            data-side="left">
+
                         {% if it.img %}
                           <img class="cake-img"
                                src="{{ url_for('static', filename='foto_tortik/' ~ it.img) }}"
                                alt="{{ it.name }}"
                                onerror="this.style.display='none'">
                         {% endif %}
+
                         <div class="cake-name">{{ it.name }}</div>
+                        <div class="cake-mini">
+                          <span>{{ it.fifo_label }}</span>
+                        </div>
                         <div class="dot {{ it.fifo_color }}"></div>
                       </div>
                     {% else %}
                       <div class="empty">Пусто</div>
                     {% endif %}
+
                   </div>
                 {% endfor %}
               </div>
@@ -80,36 +111,55 @@
           {% endfor %}
         </div>
 
-        <!-- Правая сторона -->
+        <!-- ПРАВАЯ СТОРОНА -->
         <div class="side">
           <div class="side-title">o‘ng tomon (шоколадные)</div>
 
           {% for sidx in range(6) %}
             <div class="shelf" data-side="right" data-shelf="{{ sidx+1 }}">
-              <div class="shelf-title">Полка {{ sidx+1 }}</div>
+              <div class="shelf-title">
+                Полка {{ sidx+1 }}
+                <span class="shelf-tier">({{ state.tiers[sidx+1] }})</span>
+              </div>
 
               <div class="slots">
                 {% for p in range(4) %}
                   {% set it = state.showcase.right[sidx][p] %}
-                  <div class="slot" data-slot="{{ p }}" data-expected-tier="{{ state.tiers[sidx+1] }}">
+
+                  <div class="slot"
+                       data-slot="{{ p }}"
+                       data-side="right"
+                       data-shelf="{{ sidx+1 }}"
+                       data-expected-tier="{{ state.tiers[sidx+1] }}">
+
                     {% if it %}
-                      <div class="cake" draggable="true"
+                      <div class="cake"
+                           draggable="true"
                            data-name="{{ it.name }}"
                            data-rank="{{ it.rank }}"
+                           data-fifo-day="{{ it.fifo_day }}"
+                           data-fifo-label="{{ it.fifo_label }}"
                            data-tier="{{ it.tier }}"
+                           data-price="{{ it.price }}"
                            data-side="right">
+
                         {% if it.img %}
                           <img class="cake-img"
                                src="{{ url_for('static', filename='foto_tortik/' ~ it.img) }}"
                                alt="{{ it.name }}"
                                onerror="this.style.display='none'">
                         {% endif %}
+
                         <div class="cake-name">{{ it.name }}</div>
+                        <div class="cake-mini">
+                          <span>{{ it.fifo_label }}</span>
+                        </div>
                         <div class="dot {{ it.fifo_color }}"></div>
                       </div>
                     {% else %}
                       <div class="empty">Пусто</div>
                     {% endif %}
+
                   </div>
                 {% endfor %}
               </div>
@@ -118,47 +168,96 @@
         </div>
       </section>
 
-      <!-- МОРОЗИЛКА -->
-      <aside class="freezer">
-        <div class="freezer-title">Морозилка (склад)</div>
-        <div class="muted small">В режимах 1–3 морозилку трогать нельзя. В режиме 4 можно переносить в пустой слот.</div>
+      <!-- ПРАВАЯ ПАНЕЛЬ -->
+      {% if mode == 4 %}
+        <!-- МОРОЗИЛКА ТОЛЬКО ДЛЯ РЕЖИМА 4 -->
+        <aside class="freezer">
+          <div class="freezer-title">Морозилка (склад)</div>
+          <div class="muted small">
+            В режиме 4 можно переносить торты в пустые слоты.
+            После заполнения проверяется FIFO и ценовая категория.
+          </div>
 
-        <div class="freezer-grid">
-          {% for it in state.freezer.left %}
-            <div class="freezer-item cake" draggable="true"
-                 data-name="{{ it.name }}"
-                 data-rank="{{ it.rank }}"
-                 data-tier="{{ it.tier }}"
-                 data-side="{{ it.side if it.side else 'left' }}">
-              {% if it.img %}
-                <img class="cake-img"
-                     src="{{ url_for('static', filename='foto_tortik/' ~ it.img) }}"
-                     alt="{{ it.name }}"
-                     onerror="this.style.display='none'">
-              {% endif %}
-              <div class="cake-name">{{ it.name }}</div>
-              <div class="dot {{ it.fifo_color }}"></div>
-            </div>
-          {% endfor %}
+          <div class="freezer-grid">
+            {% for it in state.freezer.left %}
+              <div class="freezer-item cake"
+                   draggable="true"
+                   data-name="{{ it.name }}"
+                   data-rank="{{ it.rank }}"
+                   data-fifo-day="{{ it.fifo_day }}"
+                   data-fifo-label="{{ it.fifo_label }}"
+                   data-tier="{{ it.tier }}"
+                   data-price="{{ it.price }}"
+                   data-side="{{ it.side if it.side else 'left' }}">
 
-          {% for it in state.freezer.right %}
-            <div class="freezer-item cake" draggable="true"
-                 data-name="{{ it.name }}"
-                 data-rank="{{ it.rank }}"
-                 data-tier="{{ it.tier }}"
-                 data-side="{{ it.side if it.side else 'right' }}">
-              {% if it.img %}
-                <img class="cake-img"
-                     src="{{ url_for('static', filename='foto_tortik/' ~ it.img) }}"
-                     alt="{{ it.name }}"
-                     onerror="this.style.display='none'">
-              {% endif %}
-              <div class="cake-name">{{ it.name }}</div>
-              <div class="dot {{ it.fifo_color }}"></div>
+                {% if it.img %}
+                  <img class="cake-img"
+                       src="{{ url_for('static', filename='foto_tortik/' ~ it.img) }}"
+                       alt="{{ it.name }}"
+                       onerror="this.style.display='none'">
+                {% endif %}
+
+                <div class="cake-name">{{ it.name }}</div>
+                <div class="cake-mini">
+                  <span>{{ it.fifo_label }}</span>
+                </div>
+                <div class="dot {{ it.fifo_color }}"></div>
+              </div>
+            {% endfor %}
+
+            {% for it in state.freezer.right %}
+              <div class="freezer-item cake"
+                   draggable="true"
+                   data-name="{{ it.name }}"
+                   data-rank="{{ it.rank }}"
+                   data-fifo-day="{{ it.fifo_day }}"
+                   data-fifo-label="{{ it.fifo_label }}"
+                   data-tier="{{ it.tier }}"
+                   data-price="{{ it.price }}"
+                   data-side="{{ it.side if it.side else 'right' }}">
+
+                {% if it.img %}
+                  <img class="cake-img"
+                       src="{{ url_for('static', filename='foto_tortik/' ~ it.img) }}"
+                       alt="{{ it.name }}"
+                       onerror="this.style.display='none'">
+                {% endif %}
+
+                <div class="cake-name">{{ it.name }}</div>
+                <div class="cake-mini">
+                  <span>{{ it.fifo_label }}</span>
+                </div>
+                <div class="dot {{ it.fifo_color }}"></div>
+              </div>
+            {% endfor %}
+          </div>
+        </aside>
+
+      {% else %}
+        <!-- ТАБЛИЦА ЦЕН ДЛЯ РЕЖИМОВ 1,2,3 -->
+        <aside class="price-panel">
+          <div class="freezer-title">Таблица цен</div>
+          <div class="muted small">
+            Торты идут по алфавиту. Используй таблицу, чтобы понять ценовую категорию.
+          </div>
+
+          <div class="price-table">
+            <div class="price-head">
+              <span>Торт</span>
+              <span>Цена</span>
+              <span>Кат.</span>
             </div>
-          {% endfor %}
-        </div>
-      </aside>
+
+            {% for it in state.price_table %}
+              <div class="price-row">
+                <span class="price-name">{{ it.name }}</span>
+                <span class="price-value">{{ "{:,}".format(it.price).replace(",", " ") }}</span>
+                <span class="price-tier {{ it.tier }}">{{ it.tier }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        </aside>
+      {% endif %}
 
     </main>
   </div>
@@ -171,8 +270,16 @@
   <a class="btn" href="{{ url_for('menu') }}">Сменить режим</a>
 
   <div class="muted small hint">
-    Перетаскивание = <b>обмен местами</b>.
-    В режиме 4 можно класть из морозилки <b>только</b> в пустой слот.
+    Режим {{ mode }}:
+    {% if mode == 1 %}
+      проверяется только FIFO.
+    {% elif mode == 2 %}
+      проверяется FIFO и ценовая категория.
+    {% elif mode == 3 %}
+      проверяется смешанная витрина: FIFO + цена.
+    {% elif mode == 4 %}
+      нужно заполнить пустые места, затем проверяется FIFO + цена.
+    {% endif %}
   </div>
 </footer>
 
@@ -187,6 +294,7 @@
 
 <script>
   window.GAME_MODE = {{ mode }};
+  window.GAME_SEED = {{ state.seed }};
 </script>
 <script src="{{ url_for('static', filename='script.js') }}"></script>
 
