@@ -1,28 +1,85 @@
 import random
 import time
+from datetime import datetime
 
-# ----------------------------
-# FIFO (1..7) => цвет (как ты сказала)
-# 1 Пн = green
-# 2 Вт = yellow
-# 3 Ср = red
-# 4 Чт = blue
-# 5 Пт = orange
-# 6 Сб = purple
-# 7 Вс = white
-# ----------------------------
+try:
+    from zoneinfo import ZoneInfo
+except Exception:
+    ZoneInfo = None
+
+
 FIFO_COLORS = {
-    1: "fifo-green",
-    2: "fifo-yellow",
-    3: "fifo-red",
-    4: "fifo-blue",
-    5: "fifo-orange",
-    6: "fifo-purple",
-    7: "fifo-white",
+    1: "fifo-green",   # Пн
+    2: "fifo-yellow",  # Вт
+    3: "fifo-red",     # Ср
+    4: "fifo-blue",    # Чт
+    5: "fifo-orange",  # Пт
+    6: "fifo-purple",  # Сб
+    7: "fifo-white",   # Вс
 }
 
-# 1-2 high, 3-4 mid, 5-6 low
-SHELF_TIER = {1: "high", 2: "high", 3: "mid", 4: "mid", 5: "low", 6: "low"}
+FIFO_LABELS = {
+    1: "Пн",
+    2: "Вт",
+    3: "Ср",
+    4: "Чт",
+    5: "Пт",
+    6: "Сб",
+    7: "Вс",
+}
+
+SHELF_TIER = {
+    1: "high",
+    2: "high",
+    3: "mid",
+    4: "mid",
+    5: "low",
+    6: "low",
+}
+
+TIER_LABELS = {
+    "high": "Дорогая категория",
+    "mid": "Средняя категория",
+    "low": "Низкая категория",
+}
+
+
+def today_fifo_day() -> int:
+    """
+    Возвращает день недели 1..7.
+    1 = понедельник, 7 = воскресенье.
+    """
+    if ZoneInfo:
+        now = datetime.now(ZoneInfo("Asia/Tashkent"))
+    else:
+        now = datetime.now()
+    return now.weekday() + 1
+
+
+def fifo_order_for_today(today_day: int):
+    """
+    Если сегодня воскресенье:
+    старый порядок: Пн, Вт, Ср, Чт, Пт, Сб, Вс
+
+    Если сегодня понедельник:
+    старый порядок: Вт, Ср, Чт, Пт, Сб, Вс, Пн
+
+    Сегодняшний день считается самым свежим.
+    Следующий день после сегодняшнего считается самым старым.
+    """
+    days = [1, 2, 3, 4, 5, 6, 7]
+    start = today_day % 7
+    return days[start:] + days[:start]
+
+
+def fifo_rank_for_day(fifo_day: int, today_day: int) -> int:
+    """
+    rank = 1 самый старый
+    rank = 7 самый свежий
+    """
+    order = fifo_order_for_today(today_day)
+    return order.index(fifo_day) + 1
+
 
 def price_tier(price: int) -> str:
     if price >= 320000:
@@ -32,9 +89,6 @@ def price_tier(price: int) -> str:
     return "low"
 
 
-# ----------------------------
-# Каталоги
-# ----------------------------
 LEFT_FRUIT = [
     ("Сафия Торт Оформление", 375000),
     ("Киевский оформленный", 369000),
@@ -93,12 +147,7 @@ RIGHT_CHOCO = [
     ("Вишенка мини торт", 122000),
 ]
 
-# ----------------------------
-# Карта "имя торта" -> файл PNG
-# (твоя версия, можно расширять)
-# ----------------------------
 CAKE_IMAGE = {
-    # RIGHT (шоколадные)
     "Рафаэлло торт": "Рафаэлло.png",
     "Орео торт": "Орео.png",
     "Роше торт": "Роше.png",
@@ -123,7 +172,6 @@ CAKE_IMAGE = {
     "Птичка торт": "Птичье молоко.png",
     "Вишенка мини торт": "вишенка.png",
 
-    # LEFT (фруктовые/оформленные)
     "Сафия Торт Оформление": "Сафия оформление.png",
     "Радуга торт круглый": "Радуга.png",
     "Корзинка торт": "Корзинка.png",
@@ -146,27 +194,41 @@ CAKE_IMAGE = {
 }
 
 
-def _catalog_to_items(side: str, pairs):
-    out = []
-    for name, price in pairs:
-        out.append({
-            "name": name,
-            "price": price,
-            "tier": price_tier(price),
-            "side": side,
-            "rank": random.randint(1, 7),
-            "fifo_color": FIFO_COLORS[1],  # временно, ниже перезапишем
-            "img": CAKE_IMAGE.get(name),
-        })
-    return out
+def _set_fifo(item, today_day: int):
+    fifo_day = random.randint(1, 7)
 
+    item["fifo_day"] = fifo_day
+    item["fifo_label"] = FIFO_LABELS[fifo_day]
+    item["fifo_color"] = FIFO_COLORS[fifo_day]
 
-def _set_fifo_color(item):
-    item["fifo_color"] = FIFO_COLORS.get(item["rank"], "fifo-white")
+    # ВАЖНО:
+    # rank теперь не просто день недели.
+    # rank = порядок старости относительно сегодняшнего дня.
+    item["rank"] = fifo_rank_for_day(fifo_day, today_day)
     return item
 
 
-def _pick_for_shelf(catalog, tier, count=4):
+def _catalog_to_items(side: str, pairs, today_day: int):
+    out = []
+    for name, price in pairs:
+        item = {
+            "name": name,
+            "price": price,
+            "tier": price_tier(price),
+            "tier_label": TIER_LABELS[price_tier(price)],
+            "side": side,
+            "rank": 0,
+            "fifo_day": 1,
+            "fifo_label": "Пн",
+            "fifo_color": "fifo-green",
+            "img": CAKE_IMAGE.get(name),
+        }
+        _set_fifo(item, today_day)
+        out.append(item)
+    return out
+
+
+def _pick_for_shelf(catalog, tier, count=4, today_day=1):
     pool = [c for c in catalog if c["tier"] == tier]
     if len(pool) < count:
         pool = catalog[:]
@@ -174,101 +236,125 @@ def _pick_for_shelf(catalog, tier, count=4):
     chosen = []
     counts = {}
     tries = 0
+
     while len(chosen) < count and tries < 5000:
         c = random.choice(pool)
         nm = c["name"]
-        # нельзя 3 одинаковых на полке
+
+        # нельзя 3 одинаковых на одной полке
         if counts.get(nm, 0) >= 2:
             tries += 1
             continue
-        chosen.append(c.copy())
+
+        item = c.copy()
+        _set_fifo(item, today_day)
+
+        chosen.append(item)
         counts[nm] = counts.get(nm, 0) + 1
         tries += 1
 
-    # если вдруг не набрали — добьём любыми
     while len(chosen) < count:
-        chosen.append(random.choice(pool).copy())
+        item = random.choice(pool).copy()
+        _set_fifo(item, today_day)
+        chosen.append(item)
 
-    # каждому торту рандомный FIFO (1..7)
-    for it in chosen:
-        it["rank"] = random.randint(1, 7)
-        _set_fifo_color(it)
+    # Идеальная FIFO-расстановка:
+    # rank 1 = самый старый, должен идти первым
+    chosen.sort(key=lambda x: x["rank"])
 
     return chosen
 
 
-def _build_perfect_showcase(left_catalog, right_catalog):
-    # showcase: sides -> shelves -> slots(4)
+def _build_perfect_showcase(left_catalog, right_catalog, today_day: int):
     showcase = {"left": [], "right": []}
+
     for shelf_no in range(1, 7):
         tier = SHELF_TIER[shelf_no]
-        showcase["left"].append(_pick_for_shelf(left_catalog, tier, 4))
-        showcase["right"].append(_pick_for_shelf(right_catalog, tier, 4))
+        showcase["left"].append(_pick_for_shelf(left_catalog, tier, 4, today_day))
+        showcase["right"].append(_pick_for_shelf(right_catalog, tier, 4, today_day))
+
     return showcase
 
 
 def _make_fifo_errors(showcase, error_rate: float):
-    """Сделаем часть полок/позиций неверными по FIFO (старые сзади)"""
-    # правило FIFO: "старый" (бОльший rank?) должен быть СПЕРЕДИ.
-    # тут rank = день 1..7; считаем что "старее" = больше (7 старее 1)
-    # Ошибка FIFO: сделаем так, чтобы один старый оказался сзади
+    """
+    Нарушаем FIFO на части полок.
+    Так как правильный порядок rank: 1 -> 7,
+    ошибка = поменять местами два торта внутри полки.
+    """
     for side in ["left", "right"]:
         for shelf in showcase[side]:
             if random.random() < error_rate:
-                # обменяем местами один back и один front
-                b = random.choice([0, 1])
-                f = random.choice([2, 3])
-                shelf[b], shelf[f] = shelf[f], shelf[b]
+                a, b = random.sample([0, 1, 2, 3], 2)
+                shelf[a], shelf[b] = shelf[b], shelf[a]
 
 
-def _make_price_errors(showcase, error_rate: float):
-    """Нарушим ценовую категорию полки: подложим торт не того tier"""
+def _make_price_errors(showcase, left_catalog, right_catalog, error_rate: float, today_day: int):
+    """
+    Делаем реальные ценовые ошибки:
+    заменяем 1 торт на полке тортом НЕ той категории.
+    """
     for side in ["left", "right"]:
-        for idx, shelf in enumerate(showcase[side], start=1):
-            correct_tier = SHELF_TIER[idx]
+        catalog = left_catalog if side == "left" else right_catalog
+
+        for shelf_idx, shelf in enumerate(showcase[side], start=1):
+            correct_tier = SHELF_TIER[shelf_idx]
+
             if random.random() < error_rate:
-                # поменяем tier у одного торта (симуляция ошибки)
-                # реально: перетащим "не того tier" (для проверки)
-                victim = random.choice([0, 1, 2, 3])
-                # просто пометим "fake_tier" как неправильный
-                shelf[victim]["tier"] = random.choice([t for t in ["high", "mid", "low"] if t != correct_tier])
+                wrong_pool = [c for c in catalog if c["tier"] != correct_tier]
+                if not wrong_pool:
+                    continue
+
+                victim_pos = random.choice([0, 1, 2, 3])
+                wrong_item = random.choice(wrong_pool).copy()
+
+                _set_fifo(wrong_item, today_day)
+
+                shelf[victim_pos] = wrong_item
 
 
-def _apply_difficulty(showcase, mode: int):
-    # режимы:
-    # 1: только FIFO, витрина правильна 80% (то есть 20% ошибок FIFO)
-    # 2: FIFO + цена, оба 80% (то есть 20% ошибок FIFO и 20% ошибок price)
-    # 3: витрина правильна 70% (30% ошибок в перемешку FIFO+цена)
+def _apply_difficulty(showcase, mode: int, left_catalog, right_catalog, today_day: int):
     if mode == 1:
+        # 80% правильно, 20% ошибка FIFO
         _make_fifo_errors(showcase, error_rate=0.20)
+
     elif mode == 2:
+        # FIFO + цена, 20% ошибки
         _make_fifo_errors(showcase, error_rate=0.20)
-        _make_price_errors(showcase, error_rate=0.20)
+        _make_price_errors(showcase, left_catalog, right_catalog, error_rate=0.20, today_day=today_day)
+
     elif mode == 3:
+        # 70% правильно, 30% ошибки
         _make_fifo_errors(showcase, error_rate=0.30)
-        _make_price_errors(showcase, error_rate=0.30)
+        _make_price_errors(showcase, left_catalog, right_catalog, error_rate=0.30, today_day=today_day)
 
 
-def _make_fill_mode(showcase, left_catalog, right_catalog, empty_slots=6):
-    """mode 4: сделаем 6 пустых мест в витрине, остальное — норм"""
+def _make_fill_mode(showcase, empty_slots=6):
     empties = []
-    # соберём все позиции
+
     positions = []
     for side in ["left", "right"]:
         for sidx in range(6):
             for pos in range(4):
                 positions.append((side, sidx, pos))
+
     random.shuffle(positions)
+
     for i in range(empty_slots):
         side, sidx, pos = positions[i]
         empties.append((side, sidx, pos))
-        showcase[side][sidx][pos] = None  # пусто
+        showcase[side][sidx][pos] = None
+
     return empties
 
 
-def _build_freezer(showcase, left_catalog, right_catalog):
-    """Склад: все торты, которых НЕТ в витрине (по имени)"""
+def _build_freezer(showcase, left_catalog, right_catalog, today_day: int):
+    """
+    Склад: торты, которых нет в витрине.
+    Для режима 4 сотрудник берёт отсюда.
+    """
     in_showcase = set()
+
     for side in ["left", "right"]:
         for shelf in showcase[side]:
             for it in shelf:
@@ -277,54 +363,97 @@ def _build_freezer(showcase, left_catalog, right_catalog):
                 in_showcase.add(it["name"])
 
     freezer = {"left": [], "right": []}
+
     for it in left_catalog:
         if it["name"] not in in_showcase:
-            freezer["left"].append(it.copy())
+            item = it.copy()
+            _set_fifo(item, today_day)
+            freezer["left"].append(item)
+
     for it in right_catalog:
         if it["name"] not in in_showcase:
-            freezer["right"].append(it.copy())
+            item = it.copy()
+            _set_fifo(item, today_day)
+            freezer["right"].append(item)
 
-    # FIFO на складе тоже пусть будет рандом
-    for side in ["left", "right"]:
-        for it in freezer[side]:
-            it["rank"] = random.randint(1, 7)
-            _set_fifo_color(it)
+    random.shuffle(freezer["left"])
+    random.shuffle(freezer["right"])
 
     return freezer
 
 
-def generate_game_state(mode: int, recent_seeds):
-    # seed так, чтобы не повторялось
-    # берём текущий time + попытки, пока не найдём новый
+def _build_price_table(left_catalog, right_catalog):
+    """
+    Для режима 2/3 справа можно показывать таблицу цен.
+    Сортировка по алфавиту, чтобы сотруднику не было слишком легко.
+    """
+    all_items = []
+
+    for it in left_catalog + right_catalog:
+        all_items.append({
+            "name": it["name"],
+            "price": it["price"],
+            "tier": it["tier"],
+            "tier_label": it["tier_label"],
+            "side": it["side"],
+            "img": it["img"],
+        })
+
+    all_items.sort(key=lambda x: x["name"])
+    return all_items
+
+
+def generate_game_state(mode: int, recent_seeds=None):
+    if recent_seeds is None:
+        recent_seeds = []
+
     base = int(time.time() * 1000)
     seed = base
     tries = 0
+
     while seed in recent_seeds and tries < 200:
         seed = base + random.randint(1, 999999)
         tries += 1
 
     random.seed(seed)
 
-    left_catalog = _catalog_to_items("left", LEFT_FRUIT)
-    right_catalog = _catalog_to_items("right", RIGHT_CHOCO)
+    today_day = today_fifo_day()
+    fifo_order = fifo_order_for_today(today_day)
 
-    # идеальная витрина
-    showcase = _build_perfect_showcase(left_catalog, right_catalog)
+    left_catalog = _catalog_to_items("left", LEFT_FRUIT, today_day)
+    right_catalog = _catalog_to_items("right", RIGHT_CHOCO, today_day)
+
+    showcase = _build_perfect_showcase(left_catalog, right_catalog, today_day)
 
     empties = []
-    if mode in [1, 2, 3]:
-        _apply_difficulty(showcase, mode)
-    elif mode == 4:
-        # сначала идеально, потом сделаем пустые места
-        empties = _make_fill_mode(showcase, left_catalog, right_catalog, empty_slots=6)
 
-    freezer = _build_freezer(showcase, left_catalog, right_catalog)
+    if mode in [1, 2, 3]:
+        _apply_difficulty(showcase, mode, left_catalog, right_catalog, today_day)
+
+    elif mode == 4:
+        # режим заполнения:
+        # витрина правильная, но есть пустые места
+        empties = _make_fill_mode(showcase, empty_slots=6)
+
+    freezer = _build_freezer(showcase, left_catalog, right_catalog, today_day)
+    price_table = _build_price_table(left_catalog, right_catalog)
 
     return {
         "seed": seed,
         "mode": mode,
+
+        # основа
         "showcase": showcase,
         "freezer": freezer,
         "empties": empties,
         "tiers": SHELF_TIER,
+
+        # новое для недельного FIFO
+        "today_fifo_day": today_day,
+        "today_fifo_label": FIFO_LABELS[today_day],
+        "fifo_order": fifo_order,
+        "fifo_order_labels": [FIFO_LABELS[d] for d in fifo_order],
+
+        # новое для режима 2/3
+        "price_table": price_table,
     }
