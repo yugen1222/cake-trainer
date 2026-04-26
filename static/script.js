@@ -45,6 +45,10 @@
     return !!cakeEl.closest(".freezer");
   }
 
+  function getFreezerGrid() {
+    return qs(".freezer-grid");
+  }
+
   function slotHasCake(slotEl) {
     return !!qs(".cake", slotEl);
   }
@@ -86,7 +90,7 @@
       return;
     }
 
-    resultText.textContent = msg;
+    resultText.innerHTML = msg.replace(/\n/g, "<br>");
     modal.hidden = false;
   }
 
@@ -108,7 +112,7 @@
     }
   });
 
-  // ---------- drag ----------
+  // ---------- DRAG ----------
   document.addEventListener("dragstart", (e) => {
     const cake = closestCake(e.target);
     if (!cake) return;
@@ -138,23 +142,36 @@
 
   document.addEventListener("dragover", (e) => {
     const slot = closestSlot(e.target);
-    if (!slot) return;
+    const freezerGrid = e.target.closest(".freezer-grid");
 
-    e.preventDefault();
-
-    if (e.dataTransfer) {
-      e.dataTransfer.dropEffect = "move";
+    if (slot || freezerGrid) {
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
     }
   });
 
   document.addEventListener("drop", (e) => {
+    if (!draggedCake) return;
+
     const targetSlot = closestSlot(e.target);
-    if (!targetSlot) return;
+    const targetFreezerGrid = e.target.closest(".freezer-grid");
 
     e.preventDefault();
 
-    if (!draggedCake) return;
+    // Режим 4: из витрины можно убрать обратно в морозилку
+    if (MODE === 4 && targetFreezerGrid && !fromFreezer) {
+      targetFreezerGrid.appendChild(draggedCake);
+      if (fromSlot) ensureEmpty(fromSlot);
+      return;
+    }
 
+    // В режимах 1-3 морозилку трогать нельзя
+    if (MODE !== 4 && fromFreezer) return;
+
+    // Если бросаем не в слот — ничего
+    if (!targetSlot) return;
+
+    // Режим 4: из морозилки можно класть только в пустой слот
     if (MODE === 4 && fromFreezer) {
       if (slotHasCake(targetSlot)) return;
 
@@ -163,12 +180,11 @@
       return;
     }
 
-    if (MODE !== 4 && fromFreezer) return;
-
     if (fromSlot && fromSlot === targetSlot) return;
 
     const targetCake = qs(".cake", targetSlot);
 
+    // Перемещение в пустой слот
     if (!targetCake) {
       removeEmpty(targetSlot);
       targetSlot.appendChild(draggedCake);
@@ -177,129 +193,294 @@
       return;
     }
 
+    // Обмен местами
     if (fromSlot) {
       targetSlot.appendChild(draggedCake);
       fromSlot.appendChild(targetCake);
     }
   });
 
-  // ---------- check helpers ----------
+  // ---------- CHECK HELPERS ----------
   function parseRank(cakeEl) {
     const r = Number(cakeEl?.dataset?.rank);
     return Number.isFinite(r) ? r : 999999;
   }
 
+  function cakeName(cakeEl) {
+    return (cakeEl?.dataset?.name || "").trim();
+  }
+
+  function cakeLabel(cakeEl) {
+    return (cakeEl?.dataset?.fifoLabel || "").trim();
+  }
+
   function getTier(cakeEl) {
-    return (cakeEl?.dataset?.tier ?? "").toString();
+    return (cakeEl?.dataset?.tier || "").toString();
   }
 
   function getExpectedTier(slotEl) {
-    return (slotEl?.dataset?.expectedTier ?? "").toString();
+    return (slotEl?.dataset?.expectedTier || "").toString();
   }
 
-  function checkFIFOinShelf(shelfEl) {
-    const slots = qsa(".slot", shelfEl);
-    const perSlot = new Map();
+  function slotPositionName(slotEl) {
+    const p = Number(slotEl.dataset.slot);
+    const shelf = slotEl.dataset.shelf;
+    const side = slotEl.dataset.side === "left" ? "фруктовая сторона" : "шоколадная сторона";
 
-    let last = -Infinity;
-    let okAll = true;
+    let row = "";
+    if (p === 0) row = "задний левый";
+    else if (p === 1) row = "задний правый";
+    else if (p === 2) row = "передний левый";
+    else if (p === 3) row = "передний правый";
+    else row = "позиция " + p;
+
+    return side + ", полка " + shelf + ", " + row;
+  }
+
+  function accessibilityScore(slotEl) {
+    const p = Number(slotEl.dataset.slot);
+    const shelf = Number(slotEl.dataset.shelf || 0);
+
+    const isFront = p === 2 || p === 3;
+    const rowScore = isFront ? 0 : 1;
+
+    return rowScore * 100 + shelf;
+  }
+
+  function getShowcaseCakes() {
+    return qsa(".showcase .slot").map(slot => {
+      const cake = qs(".cake", slot);
+      if (!cake) return null;
+
+      return {
+        slot,
+        cake,
+        name: cakeName(cake),
+        rank: parseRank(cake),
+        label: cakeLabel(cake),
+        access: accessibilityScore(slot)
+      };
+    }).filter(Boolean);
+  }
+
+  function checkTierSlot(slot) {
+    const cake = qs(".cake", slot);
+    if (!cake) return false;
+
+    const expected = getExpectedTier(slot);
+    if (!expected) return true;
+
+    return getTier(cake) === expected;
+  }
+
+  function checkShelfCrossRule(shelf, errors) {
+    const slots = qsa(".slot", shelf);
+    const byName = new Map();
+    let shelfOk = true;
 
     for (const slot of slots) {
       const cake = qs(".cake", slot);
       if (!cake) continue;
 
-      const r = parseRank(cake);
-      const ok = r >= last;
-
-      perSlot.set(slot, ok);
-
-      if (!ok) okAll = false;
-
-      last = Math.max(last, r);
+      const name = cakeName(cake);
+      if (!byName.has(name)) byName.set(name, []);
+      byName.get(name).push(slot);
     }
 
-    return {
-      ok: okAll,
-      perSlot: perSlot
-    };
-  }
-
-  function checkTierInShelf(shelfEl) {
-    const slots = qsa(".slot", shelfEl);
-    const perSlot = new Map();
-
-    let okAll = true;
-
-    for (const slot of slots) {
-      const cake = qs(".cake", slot);
-      if (!cake) continue;
-
-      const expected = getExpectedTier(slot);
-
-      if (!expected) {
-        perSlot.set(slot, true);
+    for (const [name, cakeSlots] of byName.entries()) {
+      if (cakeSlots.length > 2) {
+        shelfOk = false;
+        cakeSlots.forEach(slot => markSlot(slot, false));
+        errors.push(
+          "❌ Ошибка количества: «" + name + "».\n" +
+          "На одной полке больше 2 одинаковых тортов. Оставь максимум 2."
+        );
         continue;
       }
 
-      const ok = getTier(cake) === expected;
+      if (cakeSlots.length === 2) {
+        const positions = cakeSlots.map(slot => Number(slot.dataset.slot)).sort((a, b) => a - b);
+        const key = positions.join("-");
 
-      perSlot.set(slot, ok);
+        const isDiagonal = key === "0-3" || key === "1-2";
 
-      if (!ok) okAll = false;
+        if (!isDiagonal) {
+          shelfOk = false;
+          cakeSlots.forEach(slot => markSlot(slot, false));
+
+          errors.push(
+            "❌ Ошибка выкладки: «" + name + "».\n" +
+            "Одинаковые торты должны стоять крест-на-крест: задний левый + передний правый или задний правый + передний левый."
+          );
+        }
+      }
     }
 
-    return {
-      ok: okAll,
-      perSlot: perSlot
-    };
+    return shelfOk;
   }
 
-  function isSlotCorrectByMode(slot, fifo, tier) {
-    const hasCake = !!qs(".cake", slot);
+  function checkGlobalDuplicateLimit(errors) {
+    const items = getShowcaseCakes();
+    const byName = new Map();
+    let okAll = true;
 
-    if (!hasCake) {
-      return MODE !== 4;
+    for (const item of items) {
+      if (!byName.has(item.name)) byName.set(item.name, []);
+      byName.get(item.name).push(item);
     }
 
-    if (MODE === 1) {
-      return fifo.perSlot.get(slot) ?? true;
+    for (const [name, arr] of byName.entries()) {
+      if (arr.length > 2) {
+        okAll = false;
+        arr.forEach(x => markSlot(x.slot, false));
+
+        errors.push(
+          "❌ Ошибка количества: «" + name + "».\n" +
+          "В витрине больше 2 одинаковых тортов. По правилу должно быть максимум 2."
+        );
+      }
     }
 
-    if (MODE === 2) {
-      return (fifo.perSlot.get(slot) ?? true) && (tier.perSlot.get(slot) ?? true);
-    }
-
-    if (MODE === 3) {
-      return (fifo.perSlot.get(slot) ?? true) && (tier.perSlot.get(slot) ?? true);
-    }
-
-    if (MODE === 4) {
-      return (fifo.perSlot.get(slot) ?? true) && (tier.perSlot.get(slot) ?? true);
-    }
-
-    return true;
+    return okAll;
   }
 
-  function isShelfCorrectByMode(shelf, fifo, tier) {
-    const hasEmpty = qsa(".slot", shelf).some(slot => !qs(".cake", slot));
+  function checkSameCakeFIFO(errors) {
+    const items = getShowcaseCakes();
+    const byName = new Map();
+    let okAll = true;
 
-    if (MODE === 1) {
-      return fifo.ok;
+    for (const item of items) {
+      if (!byName.has(item.name)) byName.set(item.name, []);
+      byName.get(item.name).push(item);
     }
 
-    if (MODE === 2) {
-      return fifo.ok && tier.ok;
+    for (const [name, arr] of byName.entries()) {
+      if (arr.length <= 1) continue;
+
+      for (let i = 0; i < arr.length; i++) {
+        for (let j = 0; j < arr.length; j++) {
+          if (i === j) continue;
+
+          const a = arr[i];
+          const b = arr[j];
+
+          // Если A доступнее, чем B, то A должен быть старее или равен по FIFO.
+          // rank меньше = старее.
+          if (a.access < b.access && a.rank > b.rank) {
+            okAll = false;
+            markSlot(a.slot, false);
+            markSlot(b.slot, false);
+
+            errors.push(
+              "❌ Ошибка FIFO: «" + name + "».\n" +
+              "В более доступном месте стоит более свежий торт: " +
+              cakeLabel(a.cake) + " (" + slotPositionName(a.slot) + ").\n" +
+              "Но есть более старый торт: " +
+              cakeLabel(b.cake) + " (" + slotPositionName(b.slot) + ").\n" +
+              "Старый торт должен продаваться первым."
+            );
+          }
+        }
+      }
     }
 
-    if (MODE === 3) {
-      return fifo.ok && tier.ok;
-    }
+    return okAll;
+  }
 
-    if (MODE === 4) {
-      return !hasEmpty && fifo.ok && tier.ok;
-    }
+  function checkModeTier(errors) {
+    let okAll = true;
 
-    return true;
+    if (![2, 3, 4].includes(MODE)) return true;
+
+    qsa(".showcase .slot").forEach(slot => {
+      const cake = qs(".cake", slot);
+      if (!cake) return;
+
+      const ok = checkTierSlot(slot);
+
+      if (!ok) {
+        okAll = false;
+        markSlot(slot, false);
+
+        errors.push(
+          "❌ Ошибка категории: «" + cakeName(cake) + "».\n" +
+          "Стоит не на своей ценовой полке: " + slotPositionName(slot) + "."
+        );
+      }
+    });
+
+    return okAll;
+  }
+
+  function checkMode4Filled(errors) {
+    if (MODE !== 4) return true;
+
+    let okAll = true;
+
+    qsa(".showcase .slot").forEach(slot => {
+      const cake = qs(".cake", slot);
+
+      if (!cake) {
+        okAll = false;
+        markSlot(slot, false);
+        errors.push(
+          "❌ Пустое место.\n" +
+          "Нужно заполнить слот: " + slotPositionName(slot) + "."
+        );
+      }
+    });
+
+    return okAll;
+  }
+
+  function checkBasicShelfFIFO(errors) {
+    let okAll = true;
+
+    qsa(".showcase .shelf").forEach(shelf => {
+      const slots = qsa(".slot", shelf);
+      let shelfOk = true;
+
+      // Проверяем только глубину:
+      // если одинаковый торт есть спереди и сзади — спереди должен быть старее.
+      const byName = new Map();
+
+      for (const slot of slots) {
+        const cake = qs(".cake", slot);
+        if (!cake) continue;
+
+        const name = cakeName(cake);
+        if (!byName.has(name)) byName.set(name, []);
+        byName.get(name).push({ slot, cake, rank: parseRank(cake) });
+      }
+
+      for (const [name, arr] of byName.entries()) {
+        for (const front of arr.filter(x => [2, 3].includes(Number(x.slot.dataset.slot)))) {
+          for (const back of arr.filter(x => [0, 1].includes(Number(x.slot.dataset.slot)))) {
+            if (front.rank > back.rank) {
+              shelfOk = false;
+              okAll = false;
+
+              markSlot(front.slot, false);
+              markSlot(back.slot, false);
+
+              errors.push(
+                "❌ Ошибка FIFO по глубине: «" + name + "».\n" +
+                "Сзади стоит более старый торт (" + cakeLabel(back.cake) + "), чем спереди (" + cakeLabel(front.cake) + ").\n" +
+                "Старый торт должен стоять впереди."
+              );
+            }
+          }
+        }
+      }
+
+      const crossOk = checkShelfCrossRule(shelf, errors);
+
+      if (!shelfOk || !crossOk) {
+        markShelf(shelf, false);
+      }
+    });
+
+    return okAll;
   }
 
   async function saveResultToDB(scorePercent, errorsCount) {
@@ -324,73 +505,53 @@
   async function doCheck() {
     clearMarks();
 
-    const shelves = qsa(".showcase .shelf");
+    const errors = [];
 
-    let totalSlots = 0;
-    let goodSlots = 0;
-    let errorsCount = 0;
-    let emptyErrors = 0;
+    const fillOk = checkMode4Filled(errors);
+    const countOk = checkGlobalDuplicateLimit(errors);
+    const fifoDepthOk = checkBasicShelfFIFO(errors);
+    const fifoGlobalOk = checkSameCakeFIFO(errors);
+    const tierOk = checkModeTier(errors);
 
-    for (const shelf of shelves) {
-      const fifo = checkFIFOinShelf(shelf);
-      const tier = checkTierInShelf(shelf);
-      const slots = qsa(".slot", shelf);
+    qsa(".showcase .shelf").forEach(shelf => {
+      const bad = !!qs("." + CLS_BAD, shelf);
+      markShelf(shelf, !bad);
+    });
 
-      for (const slot of slots) {
-        const cake = qs(".cake", slot);
+    qsa(".showcase .slot").forEach(slot => {
+      const cake = qs(".cake", slot);
 
-        if (!cake && MODE === 4) {
-          totalSlots++;
-          errorsCount++;
-          emptyErrors++;
-          markSlot(slot, false);
-          continue;
-        }
+      if (!cake && MODE !== 4) return;
 
-        if (!cake) continue;
-
-        totalSlots++;
-
-        const ok = isSlotCorrectByMode(slot, fifo, tier);
-
-        if (ok) goodSlots++;
-        else errorsCount++;
-
-        markSlot(slot, ok);
+      if (!slot.classList.contains(CLS_BAD)) {
+        markSlot(slot, true);
       }
+    });
 
-      const anyCake = !!qs(".cake", shelf);
-      if (anyCake || MODE === 4) {
-        const shelfOk = isShelfCorrectByMode(shelf, fifo, tier);
-        markShelf(shelf, shelfOk);
-      }
-    }
-
+    const totalSlots = qsa(".showcase .slot").length;
+    const badSlots = qsa(".showcase .slot." + CLS_BAD).length;
+    const goodSlots = Math.max(0, totalSlots - badSlots);
     const percent = totalSlots ? Math.round((goodSlots / totalSlots) * 100) : 0;
 
-    await saveResultToDB(percent, errorsCount);
+    await saveResultToDB(percent, errors.length);
 
-    if (MODE === 4 && emptyErrors > 0) {
-      showResult(
-        "❌ Есть пустые места: " +
-        emptyErrors +
-        ". Заполни витрину и проверь FIFO + ценовую категорию. Результат: " +
-        percent +
-        "%"
-      );
+    if (errors.length === 0 && fillOk && countOk && fifoDepthOk && fifoGlobalOk && tierOk) {
+      showResult("✅ Отлично! Всё правильно.\nРезультат: " + percent + "%");
       return;
     }
 
-    if (percent >= 90) {
-      showResult("✅ Отлично! Правильно: " + percent + "%");
-    } else if (percent >= 70) {
-      showResult("🟡 Неплохо! Правильно: " + percent + "% (есть ошибки)");
-    } else {
-      showResult("❌ Пока плохо: " + percent + "%. Исправь подсвеченные места.");
-    }
+    const limitedErrors = errors.slice(0, 8);
+    const more = errors.length > 8 ? "\n\nИ ещё ошибок: " + (errors.length - 8) : "";
+
+    showResult(
+      "Результат: " + percent + "%\n" +
+      "Ошибок: " + errors.length + "\n\n" +
+      limitedErrors.join("\n\n") +
+      more
+    );
   }
 
-  // ---------- timer ----------
+  // ---------- TIMER ----------
   function timerSecondsByMode() {
     if (MODE === 1) return 180;
     if (MODE === 2) return 300;
@@ -430,17 +591,9 @@
     }, 1000);
   }
 
-  if (btnTimer) {
-    btnTimer.addEventListener("click", startTimer);
-  }
-
-  if (btnCheck) {
-    btnCheck.addEventListener("click", doCheck);
-  }
-
-  if (btnClear) {
-    btnClear.addEventListener("click", clearMarks);
-  }
+  if (btnTimer) btnTimer.addEventListener("click", startTimer);
+  if (btnCheck) btnCheck.addEventListener("click", doCheck);
+  if (btnClear) btnClear.addEventListener("click", clearMarks);
 
   qsa(".showcase .slot").forEach(ensureEmpty);
 })();
