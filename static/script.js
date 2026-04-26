@@ -2,9 +2,12 @@
   "use strict";
 
   const MODE = Number(window.GAME_MODE || 1);
+  const GAME_SEED = Number(window.GAME_SEED || 0);
 
   const btnCheck = document.getElementById("btnCheck");
   const btnClear = document.getElementById("btnClear");
+  const btnTimer = document.getElementById("btnTimer");
+  const timerBox = document.getElementById("timerBox");
 
   const modal = document.getElementById("resultModal");
   const resultText = document.getElementById("resultText");
@@ -19,13 +22,32 @@
   let fromSlot = null;
   let fromFreezer = false;
 
-  function qs(sel, root = document) { return root.querySelector(sel); }
-  function qsa(sel, root = document) { return Array.from(root.querySelectorAll(sel)); }
+  let timerInterval = null;
+  let timerSeconds = 0;
 
-  function closestSlot(el) { return el ? el.closest(".slot") : null; }
-  function closestCake(el) { return el ? el.closest(".cake") : null; }
-  function isCakeInFreezer(cakeEl) { return !!cakeEl.closest(".freezer"); }
-  function slotHasCake(slotEl) { return !!qs(".cake", slotEl); }
+  function qs(sel, root = document) {
+    return root.querySelector(sel);
+  }
+
+  function qsa(sel, root = document) {
+    return Array.from(root.querySelectorAll(sel));
+  }
+
+  function closestSlot(el) {
+    return el ? el.closest(".slot") : null;
+  }
+
+  function closestCake(el) {
+    return el ? el.closest(".cake") : null;
+  }
+
+  function isCakeInFreezer(cakeEl) {
+    return !!cakeEl.closest(".freezer");
+  }
+
+  function slotHasCake(slotEl) {
+    return !!qs(".cake", slotEl);
+  }
 
   function removeEmpty(slotEl) {
     const empty = qs(".empty", slotEl);
@@ -63,11 +85,17 @@
       alert(msg);
       return;
     }
+
     resultText.textContent = msg;
     modal.hidden = false;
   }
 
-  if (btnCloseModal) btnCloseModal.addEventListener("click", () => { modal.hidden = true; });
+  if (btnCloseModal) {
+    btnCloseModal.addEventListener("click", () => {
+      modal.hidden = true;
+    });
+  }
+
   if (modal) {
     modal.addEventListener("click", (e) => {
       if (e.target === modal) modal.hidden = true;
@@ -75,7 +103,9 @@
   }
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && modal && !modal.hidden) modal.hidden = true;
+    if (e.key === "Escape" && modal && !modal.hidden) {
+      modal.hidden = true;
+    }
   });
 
   // ---------- drag ----------
@@ -109,8 +139,12 @@
   document.addEventListener("dragover", (e) => {
     const slot = closestSlot(e.target);
     if (!slot) return;
+
     e.preventDefault();
-    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = "move";
+    }
   });
 
   document.addEventListener("drop", (e) => {
@@ -118,10 +152,12 @@
     if (!targetSlot) return;
 
     e.preventDefault();
+
     if (!draggedCake) return;
 
     if (MODE === 4 && fromFreezer) {
       if (slotHasCake(targetSlot)) return;
+
       removeEmpty(targetSlot);
       targetSlot.appendChild(draggedCake);
       return;
@@ -136,6 +172,7 @@
     if (!targetCake) {
       removeEmpty(targetSlot);
       targetSlot.appendChild(draggedCake);
+
       if (fromSlot) ensureEmpty(fromSlot);
       return;
     }
@@ -146,7 +183,7 @@
     }
   });
 
-  // ---------- check ----------
+  // ---------- check helpers ----------
   function parseRank(cakeEl) {
     const r = Number(cakeEl?.dataset?.rank);
     return Number.isFinite(r) ? r : 999999;
@@ -163,6 +200,7 @@
   function checkFIFOinShelf(shelfEl) {
     const slots = qsa(".slot", shelfEl);
     const perSlot = new Map();
+
     let last = -Infinity;
     let okAll = true;
 
@@ -172,17 +210,24 @@
 
       const r = parseRank(cake);
       const ok = r >= last;
+
       perSlot.set(slot, ok);
 
       if (!ok) okAll = false;
+
       last = Math.max(last, r);
     }
-    return { ok: okAll, perSlot };
+
+    return {
+      ok: okAll,
+      perSlot: perSlot
+    };
   }
 
   function checkTierInShelf(shelfEl) {
     const slots = qsa(".slot", shelfEl);
     const perSlot = new Map();
+
     let okAll = true;
 
     for (const slot of slots) {
@@ -190,34 +235,71 @@
       if (!cake) continue;
 
       const expected = getExpectedTier(slot);
+
       if (!expected) {
         perSlot.set(slot, true);
         continue;
       }
 
       const ok = getTier(cake) === expected;
+
       perSlot.set(slot, ok);
+
       if (!ok) okAll = false;
     }
 
-    return { ok: okAll, perSlot };
+    return {
+      ok: okAll,
+      perSlot: perSlot
+    };
   }
 
-  function checkMode4Filled() {
-    const allShowcaseSlots = qsa(".showcase .slot");
-    let okAll = true;
-    let errors = 0;
+  function isSlotCorrectByMode(slot, fifo, tier) {
+    const hasCake = !!qs(".cake", slot);
 
-    for (const slot of allShowcaseSlots) {
-      const ok = !!qs(".cake", slot);
-      markSlot(slot, ok);
-      if (!ok) {
-        okAll = false;
-        errors += 1;
-      }
+    if (!hasCake) {
+      return MODE !== 4;
     }
 
-    return { ok: okAll, errors: errors };
+    if (MODE === 1) {
+      return fifo.perSlot.get(slot) ?? true;
+    }
+
+    if (MODE === 2) {
+      return (fifo.perSlot.get(slot) ?? true) && (tier.perSlot.get(slot) ?? true);
+    }
+
+    if (MODE === 3) {
+      return (fifo.perSlot.get(slot) ?? true) && (tier.perSlot.get(slot) ?? true);
+    }
+
+    if (MODE === 4) {
+      return (fifo.perSlot.get(slot) ?? true) && (tier.perSlot.get(slot) ?? true);
+    }
+
+    return true;
+  }
+
+  function isShelfCorrectByMode(shelf, fifo, tier) {
+    const hasEmpty = qsa(".slot", shelf).some(slot => !qs(".cake", slot));
+
+    if (MODE === 1) {
+      return fifo.ok;
+    }
+
+    if (MODE === 2) {
+      return fifo.ok && tier.ok;
+    }
+
+    if (MODE === 3) {
+      return fifo.ok && tier.ok;
+    }
+
+    if (MODE === 4) {
+      return !hasEmpty && fifo.ok && tier.ok;
+    }
+
+    return true;
   }
 
   async function saveResultToDB(scorePercent, errorsCount) {
@@ -231,7 +313,7 @@
           mode: MODE,
           score_percent: scorePercent,
           errors_count: errorsCount,
-          seed: null
+          seed: GAME_SEED || null
         })
       });
     } catch (err) {
@@ -242,39 +324,34 @@
   async function doCheck() {
     clearMarks();
 
-    if (MODE === 4) {
-      const fillResult = checkMode4Filled();
-      const score = fillResult.ok ? 100 : Math.max(0, 100 - fillResult.errors * 5);
-
-      await saveResultToDB(score, fillResult.errors);
-
-      showResult(fillResult.ok
-        ? "✅ Отлично! Витрина заполнена."
-        : "❌ Есть пустые места. Заполни витрину из морозилки.");
-      return;
-    }
-
     const shelves = qsa(".showcase .shelf");
+
     let totalSlots = 0;
     let goodSlots = 0;
     let errorsCount = 0;
+    let emptyErrors = 0;
 
     for (const shelf of shelves) {
       const fifo = checkFIFOinShelf(shelf);
       const tier = checkTierInShelf(shelf);
-
       const slots = qsa(".slot", shelf);
 
       for (const slot of slots) {
         const cake = qs(".cake", slot);
+
+        if (!cake && MODE === 4) {
+          totalSlots++;
+          errorsCount++;
+          emptyErrors++;
+          markSlot(slot, false);
+          continue;
+        }
+
         if (!cake) continue;
 
         totalSlots++;
 
-        let ok = true;
-        if (MODE === 1) ok = fifo.perSlot.get(slot) ?? true;
-        if (MODE === 2) ok = tier.perSlot.get(slot) ?? true;
-        if (MODE === 3) ok = (fifo.perSlot.get(slot) ?? true) && (tier.perSlot.get(slot) ?? true);
+        const ok = isSlotCorrectByMode(slot, fifo, tier);
 
         if (ok) goodSlots++;
         else errorsCount++;
@@ -283,11 +360,8 @@
       }
 
       const anyCake = !!qs(".cake", shelf);
-      if (anyCake) {
-        let shelfOk = true;
-        if (MODE === 1) shelfOk = fifo.ok;
-        if (MODE === 2) shelfOk = tier.ok;
-        if (MODE === 3) shelfOk = fifo.ok && tier.ok;
+      if (anyCake || MODE === 4) {
+        const shelfOk = isShelfCorrectByMode(shelf, fifo, tier);
         markShelf(shelf, shelfOk);
       }
     }
@@ -296,13 +370,77 @@
 
     await saveResultToDB(percent, errorsCount);
 
-    if (percent >= 90) showResult("✅ Отлично! Правильно: " + percent + "%");
-    else if (percent >= 70) showResult("🟡 Неплохо! Правильно: " + percent + "% (есть ошибки)");
-    else showResult("❌ Пока плохо: " + percent + "%. Исправь подсвеченные места.");
+    if (MODE === 4 && emptyErrors > 0) {
+      showResult(
+        "❌ Есть пустые места: " +
+        emptyErrors +
+        ". Заполни витрину и проверь FIFO + ценовую категорию. Результат: " +
+        percent +
+        "%"
+      );
+      return;
+    }
+
+    if (percent >= 90) {
+      showResult("✅ Отлично! Правильно: " + percent + "%");
+    } else if (percent >= 70) {
+      showResult("🟡 Неплохо! Правильно: " + percent + "% (есть ошибки)");
+    } else {
+      showResult("❌ Пока плохо: " + percent + "%. Исправь подсвеченные места.");
+    }
   }
 
-  if (btnCheck) btnCheck.addEventListener("click", doCheck);
-  if (btnClear) btnClear.addEventListener("click", clearMarks);
+  // ---------- timer ----------
+  function timerSecondsByMode() {
+    if (MODE === 1) return 180;
+    if (MODE === 2) return 300;
+    if (MODE === 3) return 360;
+    if (MODE === 4) return 420;
+    return 300;
+  }
+
+  function formatTime(sec) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+  }
+
+  function startTimer() {
+    if (!timerBox) return;
+
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+
+    timerSeconds = timerSecondsByMode();
+    timerBox.textContent = "⏱ " + formatTime(timerSeconds);
+    timerBox.classList.add("timer-active");
+
+    timerInterval = setInterval(() => {
+      timerSeconds--;
+      timerBox.textContent = "⏱ " + formatTime(timerSeconds);
+
+      if (timerSeconds <= 0) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        timerBox.classList.remove("timer-active");
+        showResult("⏰ Время вышло! Нажми «Проверить», чтобы увидеть результат.");
+      }
+    }, 1000);
+  }
+
+  if (btnTimer) {
+    btnTimer.addEventListener("click", startTimer);
+  }
+
+  if (btnCheck) {
+    btnCheck.addEventListener("click", doCheck);
+  }
+
+  if (btnClear) {
+    btnClear.addEventListener("click", clearMarks);
+  }
 
   qsa(".showcase .slot").forEach(ensureEmpty);
 })();
